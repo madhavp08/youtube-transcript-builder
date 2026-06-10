@@ -10,7 +10,11 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from youtube_transcript_api._errors import (
+    AgeRestricted,
+    IpBlocked,
     NoTranscriptFound,
+    PoTokenRequired,
+    RequestBlocked,
     TranscriptsDisabled,
     VideoUnavailable,
 )
@@ -44,6 +48,14 @@ def build_clean_transcript(url: str) -> dict:
         raise ValueError("No English transcript was found for this video.")
     except VideoUnavailable:
         raise ValueError("This video is unavailable (private, deleted, or restricted).")
+    except AgeRestricted:
+        raise ValueError("This video is age-restricted, so its captions can't be fetched.")
+    except (RequestBlocked, IpBlocked, PoTokenRequired):
+        raise ValueError(
+            "YouTube is blocking requests from this server right now. "
+            "Please try again in a few minutes, or run the tool locally "
+            "(see the GitHub repo README)."
+        )
 
     duration_hours = fetch_mod.transcript_duration_seconds(fetched) / 3600
     if duration_hours > MAX_DURATION_HOURS:
