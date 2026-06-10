@@ -20,7 +20,7 @@ Then just give it a link and the filename you want:
 python build-transcript.py "https://www.youtube.com/watch?v=zbMOQ5S5n4M" "my-transcript.txt"
 ```
 
-The cleaned transcript lands in the `transcripts/` folder. Done.
+The cleaned transcript lands in your `Downloads` folder. Done.
 
 ## Troubleshooting
 

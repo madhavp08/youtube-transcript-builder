@@ -109,8 +109,8 @@ class TestBuildHelpers(unittest.TestCase):
         self.assertEqual(build_mod.normalize_output_name("foo.txt"), "foo.txt")
         self.assertEqual(build_mod.normalize_output_name("../../evil"), "evil.txt")
 
-    def test_transcripts_dir_is_anchored_to_project(self):
-        self.assertEqual(build_mod.TRANSCRIPTS_DIR, PROJECT_DIR / "transcripts")
+    def test_output_dir_is_downloads(self):
+        self.assertEqual(build_mod.TRANSCRIPTS_DIR, Path.home() / "Downloads")
 
     def test_duration_helper(self):
         class Snippet:

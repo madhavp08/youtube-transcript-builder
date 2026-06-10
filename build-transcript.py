@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch a YouTube transcript, clean it, and save it to the transcripts folder."""
+"""Fetch a YouTube transcript, clean it, and save it to your Downloads folder."""
 
 import argparse
 import importlib.util
@@ -12,7 +12,7 @@ from youtube_transcript_api._errors import (
     VideoUnavailable,
 )
 
-TRANSCRIPTS_DIR = Path(__file__).resolve().parent / "transcripts"
+TRANSCRIPTS_DIR = Path.home() / "Downloads"
 MAX_DURATION_HOURS = 10
 
 

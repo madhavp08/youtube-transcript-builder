@@ -81,13 +81,13 @@ def main() -> int:
     parser.add_argument(
         "-o",
         "--output",
-        help="Output .txt file path (default: transcripts/<video_id>_raw.txt)",
+        help="Output .txt file path (default: ~/Downloads/<video_id>_raw.txt)",
     )
     parser.add_argument(
         "-d",
         "--output-dir",
-        default="transcripts",
-        help="Directory for default output file (default: transcripts)",
+        default=str(Path.home() / "Downloads"),
+        help="Directory for default output file (default: ~/Downloads)",
     )
     parser.add_argument(
         "-l",
