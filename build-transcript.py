@@ -12,7 +12,8 @@ from youtube_transcript_api._errors import (
     VideoUnavailable,
 )
 
-TRANSCRIPTS_DIR = Path("transcripts")
+TRANSCRIPTS_DIR = Path(__file__).resolve().parent / "transcripts"
+MAX_DURATION_HOURS = 10
 
 
 def load_module(module_name: str, file_path: Path):
@@ -48,7 +49,19 @@ def build_transcript(
 
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    transcript = fetch_mod.fetch_transcript_text(video_id, languages=languages)
+    fetched = fetch_mod.fetch_transcript(video_id, languages=languages)
+
+    duration_hours = fetch_mod.transcript_duration_seconds(fetched) / 3600
+    if duration_hours > MAX_DURATION_HOURS:
+        raise ValueError(
+            f"Video is {duration_hours:.1f} hours long; "
+            f"only videos up to {MAX_DURATION_HOURS} hours are supported."
+        )
+
+    transcript = " ".join(snippet.text for snippet in fetched)
+    if not transcript.strip():
+        raise ValueError("Transcript is empty for this video.")
+
     fetch_mod.save_transcript(transcript, raw_path)
 
     cleaned_text = clean_mod.clean_transcript(transcript)

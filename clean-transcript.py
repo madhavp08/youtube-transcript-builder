@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 BRACKETED_NOISE = re.compile(r"\[[^\]]+\]")
-MULTISPACE = re.compile(r" {2,}")
+WHITESPACE = re.compile(r"\s+")
 SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?])")
 
 SECTION_START = re.compile(
@@ -33,23 +33,43 @@ TOPIC_QUESTION = re.compile(
 )
 
 MAX_SENTENCES_PER_PARAGRAPH = 5
+MAX_WORDS_PER_PARAGRAPH = 110
+# Auto-generated captions have no punctuation; chunk runaway "sentences" by words.
+MAX_WORDS_PER_SENTENCE = 25
 
 
 def clean_text(text: str) -> str:
-    """Remove noise and normalize spacing in raw transcript text."""
+    """Remove noise and normalize all whitespace (incl. newlines) in raw text."""
     text = BRACKETED_NOISE.sub("", text)
-    text = MULTISPACE.sub(" ", text)
+    text = WHITESPACE.sub(" ", text)
     text = SPACE_BEFORE_PUNCT.sub(r"\1", text)
     return text.strip()
 
 
+def chunk_words(sentence: str, max_words: int = MAX_WORDS_PER_SENTENCE) -> list[str]:
+    """Split an overly long (likely unpunctuated) sentence into word chunks."""
+    words = sentence.split()
+    if len(words) <= max_words:
+        return [sentence]
+
+    return [
+        " ".join(words[i : i + max_words]) for i in range(0, len(words), max_words)
+    ]
+
+
 def split_sentences(text: str) -> list[str]:
-    """Split transcript text into sentences."""
+    """Split transcript text into sentences, chunking unpunctuated runs."""
     if not text:
         return []
 
     parts = re.split(r'(?<=[.!?])\s+(?=[A-Z"\'(])', text)
-    return [part.strip() for part in parts if part.strip()]
+
+    sentences: list[str] = []
+    for part in parts:
+        part = part.strip()
+        if part:
+            sentences.extend(chunk_words(part))
+    return sentences
 
 
 def starts_new_section(sentence: str, previous: str | None) -> bool:
@@ -70,19 +90,23 @@ def paragraphize(sentences: list[str]) -> list[str]:
 
     paragraphs: list[str] = []
     current: list[str] = []
+    current_words = 0
     previous: str | None = None
 
     for sentence in sentences:
         should_break = bool(current) and (
             len(current) >= MAX_SENTENCES_PER_PARAGRAPH
+            or current_words >= MAX_WORDS_PER_PARAGRAPH
             or starts_new_section(sentence, previous)
         )
 
         if should_break:
             paragraphs.append(" ".join(current))
             current = []
+            current_words = 0
 
         current.append(sentence)
+        current_words += len(sentence.split())
         previous = sentence
 
     if current:

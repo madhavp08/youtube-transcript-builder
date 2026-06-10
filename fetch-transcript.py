@@ -42,11 +42,23 @@ def extract_video_id(url: str) -> str:
     raise ValueError(f"Could not extract a video ID from: {url}")
 
 
+def fetch_transcript(video_id: str, languages: list[str] | None = None):
+    """Fetch the transcript snippets for a video."""
+    api = YouTubeTranscriptApi()
+    return api.fetch(video_id, languages=languages or ["en"])
+
+
+def transcript_duration_seconds(fetched) -> float:
+    """Total video time covered by the transcript, in seconds."""
+    if len(fetched) == 0:
+        return 0.0
+    last = fetched[-1]
+    return last.start + last.duration
+
+
 def fetch_transcript_text(video_id: str, languages: list[str] | None = None) -> str:
     """Fetch transcript snippets and join them into plain text."""
-    api = YouTubeTranscriptApi()
-    fetched = api.fetch(video_id, languages=languages or ["en"])
-
+    fetched = fetch_transcript(video_id, languages)
     return " ".join(snippet.text for snippet in fetched)
 
 
