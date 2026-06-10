@@ -58,7 +58,7 @@ def build_transcript(
             f"only videos up to {MAX_DURATION_HOURS} hours are supported."
         )
 
-    transcript = " ".join(snippet.text for snippet in fetched)
+    transcript = fetch_mod.join_snippets(fetched)
     if not transcript.strip():
         raise ValueError("Transcript is empty for this video.")
 

@@ -56,10 +56,24 @@ def transcript_duration_seconds(fetched) -> float:
     return last.start + last.duration
 
 
+def join_snippets(fetched) -> str:
+    """Join snippet texts, skipping consecutive duplicates.
+
+    Some caption tracks (often translated ones) repeat every frame twice;
+    identical back-to-back snippets carry no information.
+    """
+    parts: list[str] = []
+    previous = None
+    for snippet in fetched:
+        if snippet.text != previous:
+            parts.append(snippet.text)
+        previous = snippet.text
+    return " ".join(parts)
+
+
 def fetch_transcript_text(video_id: str, languages: list[str] | None = None) -> str:
     """Fetch transcript snippets and join them into plain text."""
-    fetched = fetch_transcript(video_id, languages)
-    return " ".join(snippet.text for snippet in fetched)
+    return join_snippets(fetch_transcript(video_id, languages))
 
 
 def save_transcript(text: str, output_path: Path) -> Path:

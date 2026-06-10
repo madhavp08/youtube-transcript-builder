@@ -7,8 +7,15 @@ import sys
 from pathlib import Path
 
 BRACKETED_NOISE = re.compile(r"\[[^\]]+\]")
+# Zero-width space / BOM / word-joiner. ZWNJ and ZWJ are kept: they are
+# meaningful in Indic scripts.
+INVISIBLE_CHARS = re.compile(r"[\u200b\ufeff\u2060]")
 WHITESPACE = re.compile(r"\s+")
-SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?])")
+SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?।॥])")
+# Sentence ends: Latin punctuation plus Devanagari danda/double danda.
+# Next sentence may start with any non-lowercase-Latin char (covers
+# uppercase, quotes, digits, and non-Latin scripts like Devanagari).
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?।॥])\s+(?=[^a-z])")
 
 SECTION_START = re.compile(
     r"^("
@@ -34,13 +41,16 @@ TOPIC_QUESTION = re.compile(
 
 MAX_SENTENCES_PER_PARAGRAPH = 5
 MAX_WORDS_PER_PARAGRAPH = 110
-# Auto-generated captions have no punctuation; chunk runaway "sentences" by words.
+# Auto-generated captions have no punctuation; their "sentences" run for
+# thousands of words. Only chunk when a sentence is clearly not a real one.
+LONG_SENTENCE_THRESHOLD = 60
 MAX_WORDS_PER_SENTENCE = 25
 
 
 def clean_text(text: str) -> str:
     """Remove noise and normalize all whitespace (incl. newlines) in raw text."""
     text = BRACKETED_NOISE.sub("", text)
+    text = INVISIBLE_CHARS.sub("", text)
     text = WHITESPACE.sub(" ", text)
     text = SPACE_BEFORE_PUNCT.sub(r"\1", text)
     return text.strip()
@@ -49,7 +59,7 @@ def clean_text(text: str) -> str:
 def chunk_words(sentence: str, max_words: int = MAX_WORDS_PER_SENTENCE) -> list[str]:
     """Split an overly long (likely unpunctuated) sentence into word chunks."""
     words = sentence.split()
-    if len(words) <= max_words:
+    if len(words) <= LONG_SENTENCE_THRESHOLD:
         return [sentence]
 
     return [
@@ -62,7 +72,7 @@ def split_sentences(text: str) -> list[str]:
     if not text:
         return []
 
-    parts = re.split(r'(?<=[.!?])\s+(?=[A-Z"\'(])', text)
+    parts = SENTENCE_SPLIT.split(text)
 
     sentences: list[str] = []
     for part in parts:

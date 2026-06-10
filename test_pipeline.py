@@ -103,6 +103,25 @@ class TestPunctuatedTranscripts(unittest.TestCase):
         self.assertEqual(clean_mod.clean_transcript(""), "\n")
 
 
+class TestNonEnglishTranscripts(unittest.TestCase):
+    def test_zero_width_chars_removed(self):
+        raw = "\u200b\u200bअब हम\u200b \u200bफँसे हुए हैं।\u200b"
+        self.assertEqual(clean_mod.clean_text(raw), "अब हम फँसे हुए हैं।")
+
+    def test_hindi_danda_splits_sentences(self):
+        text = "अब हम फँसे हुए हैं। हमें शेल्टर बनाना होगा। कोई प्रेशर नहीं।"
+        sentences = clean_mod.split_sentences(text)
+        self.assertEqual(len(sentences), 3)
+
+    def test_consecutive_duplicate_snippets_dropped(self):
+        class Snippet:
+            def __init__(self, text):
+                self.text = text
+
+        snippets = [Snippet("a"), Snippet("a"), Snippet("b"), Snippet("b"), Snippet("a")]
+        self.assertEqual(fetch_mod.join_snippets(snippets), "a b a")
+
+
 class TestBuildHelpers(unittest.TestCase):
     def test_normalize_output_name(self):
         self.assertEqual(build_mod.normalize_output_name("foo"), "foo.txt")

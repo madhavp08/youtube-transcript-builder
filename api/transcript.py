@@ -118,7 +118,7 @@ def build_clean_transcript(url: str) -> dict:
             f"only videos up to {MAX_DURATION_HOURS} hours are supported."
         )
 
-    text = " ".join(snippet.text for snippet in fetched)
+    text = fetch_mod.join_snippets(fetched)
     if not text.strip():
         raise ValueError("The transcript for this video is empty.")
 
