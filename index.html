@@ -6,97 +6,118 @@
 <title>YouTube Transcript Builder</title>
 <meta name="description" content="Paste a YouTube link, get a clean readable transcript. Free, no sign-up.">
 <style>
-  :root {
-    --bg: #0f1117;
-    --card: #181b23;
-    --text: #e8eaf0;
-    --muted: #9aa0ae;
-    --accent: #ff4545;
-    --border: #2a2e3a;
-  }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--bg);
-    color: var(--text);
+    background: #fff;
+    color: #111;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 48px 16px;
+    justify-content: center;
+    padding: 24px;
   }
-  main { width: 100%; max-width: 760px; }
-  h1 { font-size: 1.7rem; margin: 0 0 6px; }
-  h1 span { color: var(--accent); }
-  p.tag { color: var(--muted); margin: 0 0 28px; }
-  form { display: flex; gap: 10px; flex-wrap: wrap; }
+  main {
+    width: 100%;
+    max-width: 680px;
+    text-align: center;
+  }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+  .steps {
+    color: #888;
+    font-size: 0.95rem;
+    margin: 0 0 36px;
+  }
+  form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
   input[type="url"] {
     flex: 1;
     min-width: 240px;
-    padding: 13px 16px;
+    padding: 14px 16px;
     font-size: 1rem;
-    color: var(--text);
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    color: #111;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
     outline: none;
   }
-  input[type="url"]:focus { border-color: var(--accent); }
+  input[type="url"]:focus { border-color: #111; }
   button {
-    padding: 13px 22px;
+    padding: 14px 24px;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 500;
     color: #fff;
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
+    background: #111;
+    border: 1px solid #111;
+    border-radius: 8px;
     cursor: pointer;
   }
-  button:disabled { opacity: 0.55; cursor: wait; }
-  #status { margin: 18px 0 0; color: var(--muted); min-height: 1.4em; }
-  #status.error { color: #ff7b7b; }
-  #result { display: none; margin-top: 24px; }
+  button:disabled { opacity: 0.4; cursor: wait; }
+  button.secondary {
+    color: #111;
+    background: #fff;
+    border: 1px solid #ccc;
+  }
+  #status {
+    margin: 24px 0 0;
+    color: #888;
+    min-height: 1.5em;
+    line-height: 1.6;
+  }
+  #status.error { color: #c0392b; }
+  #status a { color: #111; }
+  #result { display: none; margin-top: 32px; text-align: left; }
   .toolbar {
     display: flex;
-    gap: 10px;
-    align-items: center;
+    gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 12px;
   }
   .toolbar input {
     flex: 1;
-    min-width: 180px;
+    min-width: 160px;
     padding: 10px 14px;
     font-size: 0.95rem;
-    color: var(--text);
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    color: #111;
+    border: 1px solid #ccc;
+    border-radius: 8px;
     outline: none;
   }
   .toolbar button { padding: 10px 18px; font-size: 0.95rem; }
-  .toolbar .secondary { background: var(--card); border: 1px solid var(--border); }
   pre {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
+    border: 1px solid #e3e3e3;
+    border-radius: 8px;
+    padding: 24px;
     white-space: pre-wrap;
     word-wrap: break-word;
-    line-height: 1.6;
+    line-height: 1.7;
     font-family: inherit;
-    font-size: 0.97rem;
-    max-height: 60vh;
+    font-size: 0.95rem;
+    max-height: 55vh;
     overflow-y: auto;
+    margin: 0;
   }
-  footer { margin-top: 32px; color: var(--muted); font-size: 0.85rem; }
+  footer {
+    margin-top: 40px;
+    color: #aaa;
+    font-size: 0.8rem;
+  }
+  footer a { color: #888; }
 </style>
 </head>
 <body>
 <main>
-  <h1>YouTube <span>Transcript</span> Builder</h1>
-  <p class="tag">Paste a YouTube link, get a clean readable transcript. Free, no sign-up. Videos up to 10 hours.</p>
+  <h1>YouTube Transcript Builder</h1>
+  <p class="steps">Paste a YouTube link &rarr; wait a few seconds &rarr; get the transcript</p>
 
   <form id="form">
     <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required autofocus>
@@ -114,7 +135,10 @@
     <pre id="transcript"></pre>
   </section>
 
-  <footer>Transcripts come from YouTube's own captions. Nothing is stored on the server.</footer>
+  <footer>
+    Free, no sign-up. Nothing is stored.
+    <a href="https://github.com/madhavp08/youtube-transcript-builder" target="_blank" rel="noopener">Run it locally</a>
+  </footer>
 </main>
 
 <script>
@@ -128,6 +152,9 @@
   const downloadBtn = document.getElementById("download");
   const copyBtn = document.getElementById("copy");
 
+  const GITHUB_URL = "https://github.com/madhavp08/youtube-transcript-builder";
+  const ALTERNATIVE_URL = "https://youtubetotranscript.com/";
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const url = urlInput.value.trim();
@@ -136,12 +163,25 @@
     goBtn.disabled = true;
     result.style.display = "none";
     status.className = "";
-    status.textContent = "Fetching transcript…";
+    status.textContent = "Fetching transcript\u2026";
 
     try {
       const res = await fetch("/api/transcript?url=" + encodeURIComponent(url));
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+
+      if (!res.ok) {
+        if (data.blocked) {
+          status.className = "error";
+          status.innerHTML =
+            "YouTube is currently blocking this website's server (a known " +
+            "limitation of free hosting, sorry!). You can " +
+            '<a href="' + GITHUB_URL + '" target="_blank" rel="noopener">run this tool locally</a>' +
+            " or try " +
+            '<a href="' + ALTERNATIVE_URL + '" target="_blank" rel="noopener">youtubetotranscript.com</a>.';
+          return;
+        }
+        throw new Error(data.error || "Something went wrong.");
+      }
 
       transcriptEl.textContent = data.transcript;
       filenameInput.value = data.video_id + "-transcript.txt";

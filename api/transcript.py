@@ -1,16 +1,26 @@
 """Vercel serverless function: GET /api/transcript?url=<youtube-link>
 
-Returns JSON: {"video_id": "...", "transcript": "..."} or {"error": "..."}.
+Returns JSON:
+  200 -> {"video_id": "...", "transcript": "..."}
+  4xx -> {"error": "...", "blocked": bool}
+
+If WEBSHARE_PROXY_USERNAME / WEBSHARE_PROXY_PASSWORD env vars are set,
+requests are routed through Webshare rotating residential proxies, which
+avoids YouTube blocking cloud-server IPs.
 """
 
 import importlib.util
 import json
+import os
+import time
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import (
     AgeRestricted,
+    InvalidVideoId,
     IpBlocked,
     NoTranscriptFound,
     PoTokenRequired,
@@ -18,9 +28,21 @@ from youtube_transcript_api._errors import (
     TranscriptsDisabled,
     VideoUnavailable,
 )
+from youtube_transcript_api.proxies import WebshareProxyConfig
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 MAX_DURATION_HOURS = 10
+FETCH_ATTEMPTS = 2
+
+BLOCKED_MESSAGE = (
+    "YouTube is currently blocking requests from this website's server "
+    "(a known limitation of free hosting). You can run this tool on your "
+    "own computer instead, or use another transcript site."
+)
+
+
+class BlockedError(Exception):
+    pass
 
 
 def _load_module(module_name: str, filename: str):
@@ -36,26 +58,58 @@ fetch_mod = _load_module("fetch_transcript", "fetch-transcript.py")
 clean_mod = _load_module("clean_transcript", "clean-transcript.py")
 
 
+def _make_api() -> YouTubeTranscriptApi:
+    username = os.environ.get("WEBSHARE_PROXY_USERNAME")
+    password = os.environ.get("WEBSHARE_PROXY_PASSWORD")
+
+    if username and password:
+        return YouTubeTranscriptApi(
+            proxy_config=WebshareProxyConfig(
+                proxy_username=username,
+                proxy_password=password,
+            )
+        )
+    return YouTubeTranscriptApi()
+
+
+def _fetch_with_retry(video_id: str):
+    """Fetch the transcript, retrying once on transient failures."""
+    last_exc = None
+    for attempt in range(FETCH_ATTEMPTS):
+        try:
+            return _make_api().fetch(video_id, languages=["en"])
+        except (
+            TranscriptsDisabled,
+            NoTranscriptFound,
+            VideoUnavailable,
+            AgeRestricted,
+            InvalidVideoId,
+        ):
+            # Permanent conditions: retrying won't change the outcome.
+            raise
+        except Exception as exc:
+            last_exc = exc
+            if attempt < FETCH_ATTEMPTS - 1:
+                time.sleep(0.5)
+    raise last_exc
+
+
 def build_clean_transcript(url: str) -> dict:
-    """Fetch and clean a transcript. Raises ValueError with a friendly message."""
+    """Fetch and clean a transcript. Raises ValueError/BlockedError."""
     video_id = fetch_mod.extract_video_id(url)
 
     try:
-        fetched = fetch_mod.fetch_transcript(video_id)
+        fetched = _fetch_with_retry(video_id)
     except TranscriptsDisabled:
         raise ValueError("Transcripts are disabled for this video.")
     except NoTranscriptFound:
         raise ValueError("No English transcript was found for this video.")
-    except VideoUnavailable:
+    except (VideoUnavailable, InvalidVideoId):
         raise ValueError("This video is unavailable (private, deleted, or restricted).")
     except AgeRestricted:
         raise ValueError("This video is age-restricted, so its captions can't be fetched.")
     except (RequestBlocked, IpBlocked, PoTokenRequired):
-        raise ValueError(
-            "YouTube is blocking requests from this server right now. "
-            "Please try again in a few minutes, or run the tool locally "
-            "(see the GitHub repo README)."
-        )
+        raise BlockedError()
 
     duration_hours = fetch_mod.transcript_duration_seconds(fetched) / 3600
     if duration_hours > MAX_DURATION_HOURS:
@@ -94,6 +148,9 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             result = build_clean_transcript(url)
+        except BlockedError:
+            self._send_json(429, {"error": BLOCKED_MESSAGE, "blocked": True})
+            return
         except ValueError as exc:
             self._send_json(400, {"error": str(exc)})
             return
