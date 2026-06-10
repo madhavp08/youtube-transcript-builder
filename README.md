@@ -17,7 +17,7 @@ pip install -r requirements.txt
 Then just give it a link and the filename you want:
 
 ```bash
-python build-transcript.py "https://www.youtube.com/watch?v=zbMOQ5S5n4M" "my-transcript.txt"
+python build-transcript.py "https://youtu.be/dQw4w9WgXcQ?si=0guRX3FO7wnBGPRN" "my-transcript.txt"
 ```
 
 The cleaned transcript lands in your `Downloads` folder. Done.
