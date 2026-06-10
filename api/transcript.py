@@ -12,6 +12,7 @@ avoids YouTube blocking cloud-server IPs.
 import importlib.util
 import json
 import os
+import re
 import time
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
@@ -72,12 +73,12 @@ def _make_api() -> YouTubeTranscriptApi:
     return YouTubeTranscriptApi()
 
 
-def _fetch_with_retry(video_id: str):
+def _fetch_with_retry(video_id: str, language: str):
     """Fetch the transcript, retrying once on transient failures."""
     last_exc = None
     for attempt in range(FETCH_ATTEMPTS):
         try:
-            return _make_api().fetch(video_id, languages=["en"])
+            return _make_api().fetch(video_id, languages=[language])
         except (
             TranscriptsDisabled,
             NoTranscriptFound,
@@ -94,16 +95,19 @@ def _fetch_with_retry(video_id: str):
     raise last_exc
 
 
-def build_clean_transcript(url: str) -> dict:
+def build_clean_transcript(url: str, language: str = "en") -> dict:
     """Fetch and clean a transcript. Raises ValueError/BlockedError."""
     video_id = fetch_mod.extract_video_id(url)
 
     try:
-        fetched = _fetch_with_retry(video_id)
+        fetched = _fetch_with_retry(video_id, language)
     except TranscriptsDisabled:
         raise ValueError("Transcripts are disabled for this video.")
     except NoTranscriptFound:
-        raise ValueError("No English transcript was found for this video.")
+        raise ValueError(
+            f"No '{language}' transcript was found for this video. "
+            "Try a different language."
+        )
     except (VideoUnavailable, InvalidVideoId):
         raise ValueError("This video is unavailable (private, deleted, or restricted).")
     except AgeRestricted:
@@ -141,13 +145,18 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         query = parse_qs(urlparse(self.path).query)
         url = (query.get("url") or [""])[0].strip()
+        language = (query.get("lang") or ["en"])[0].strip() or "en"
 
         if not url:
             self._send_json(400, {"error": "Missing 'url' query parameter."})
             return
 
+        if not re.fullmatch(r"[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?", language):
+            self._send_json(400, {"error": f"Invalid language code: {language}"})
+            return
+
         try:
-            result = build_clean_transcript(url)
+            result = build_clean_transcript(url, language)
         except BlockedError:
             self._send_json(429, {"error": BLOCKED_MESSAGE, "blocked": True})
             return

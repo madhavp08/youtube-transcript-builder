@@ -22,8 +22,19 @@ python build-transcript.py "https://youtu.be/dQw4w9WgXcQ?si=0guRX3FO7wnBGPRN" "m
 
 The cleaned transcript lands in your `Downloads` folder. Done.
 
+## Other languages
+
+English is the default. For another language, add `-l` with the language code:
+
+```bash
+python build-transcript.py "https://youtu.be/GpQSUjNsNm0" "hindi-transcript.txt" -l hi
+```
+
+Common codes: `hi` Hindi, `es` Spanish, `fr` French, `de` German, `ja` Japanese.
+This only works if the video actually has captions in that language.
+
 ## Troubleshooting
 
 - **"Transcripts are disabled"** — the video owner turned captions off. Nothing can be done.
-- **"No English transcript found"** — try `python fetch-transcript.py <link> -l <language-code>` for other languages.
+- **"No transcript found"** — the video has no captions in that language. Try another `-l` code.
 - **"Video is X hours long"** — only videos up to 10 hours are supported.
